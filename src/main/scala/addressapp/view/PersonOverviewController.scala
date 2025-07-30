@@ -11,6 +11,7 @@ import addressapp.util.DateUtil.asString
 import javafx.event.ActionEvent
 import scalafx.scene.control.Alert
 import scalafx.scene.control.Alert.AlertType
+import scala.util.{Failure, Success}
 @FXML
 class PersonOverviewController():
 
@@ -84,8 +85,19 @@ class PersonOverviewController():
   def handleDeletePerson(action:ActionEvent): Unit =
     val selectedIndex =
       personTable.selectionModel().selectedIndex.value
+    val selectedPerson =
+      personTable.selectionModel().selectedItem.value
     if(selectedIndex >= 0) then
-      personTable.items().remove(selectedIndex)
+      selectedPerson.delete() match
+        case Success(x) =>
+          personTable.items().remove(selectedIndex)
+        case Failure(e) =>
+          val alert = new Alert(Alert.AlertType.Warning):
+            initOwner(MainApp.stage)
+            title = "Failed to Delete"
+            headerText = "Database Error"
+            contentText = "Database error: Failed to delete"
+          alert.showAndWait()
     else
       val alert = new Alert(AlertType.Warning):
         initOwner(MainApp.stage)
@@ -93,5 +105,48 @@ class PersonOverviewController():
         headerText = "No Person Selected"
         contentText = "Please select a person in the table"
       alert.showAndWait()
+    end if
   end handleDeletePerson
-  
+
+  def handleNewPerson(action :ActionEvent) =
+    val person = new Person("", "")
+    val okClicked = MainApp.showPersonEditDialog(person)
+    if(okClicked) then
+      person.save() match
+        case Success(x) =>
+          MainApp.personData += person
+        case Failure(e) =>
+          val alert = new Alert(Alert.AlertType.Warning):
+            initOwner(MainApp.stage)
+            title = "Failed to Save"
+            headerText = "Database Error"
+            contentText = "Database error: Failed to save changes"
+          alert.showAndWait()
+    end if
+  end handleNewPerson
+
+  def handleEditPerson(action: ActionEvent) =
+    val selectedPerson =
+      personTable.selectionModel().selectedItem.value
+    if(selectedPerson != null) then
+      val okClicked = MainApp.showPersonEditDialog(selectedPerson)
+      if (okClicked) then
+        selectedPerson.save() match
+          case Success(x) =>
+            showPersonDetails(Some(selectedPerson))
+          case Failure(e) =>
+            val alert = new Alert(Alert.AlertType.Warning):
+              initOwner(MainApp.stage)
+              title = "Failed to Save"
+              headerText = "Database Error"
+              contentText = "Database error: Failed to save changes"
+            alert.showAndWait()
+      end if
+    else
+      val alert = new Alert(Alert.AlertType.Warning):
+        initOwner(MainApp.stage)
+        title = "No Selection"
+        headerText = "No Person Selected"
+        contentText = "Please select a person in the table"
+      alert.showAndWait()
+  end handleEditPerson
